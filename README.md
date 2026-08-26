@@ -117,17 +117,20 @@ RazorBuy includes a **106-scenario automated test framework** evaluating shoppin
 ### 1. Clone & Set Up Environment
 
 ```bash
-git clone https://github.com/your-username/razorbuy.git
+git clone https://github.com/SathvikGuttula/RazorBuy-Safe-Agentic-Commerce-Infrastructure.git
 cd razorbuy
 cp .env.example .env
+```
 
-2. Start PostgreSQL (Docker)
-Bash
+### 2. Start PostgreSQL (Docker)
 
+```bash
 docker compose up -d
-3. Setup & Seed Backend
-Bash
+```
 
+### 3. Set Up & Seed Backend
+
+```bash
 cd backend
 python -m venv .venv
 # On Windows:
@@ -137,28 +140,39 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 python seed_db.py
-uvicorn app.main:app --reload --port 8000
-4. Start Next.js Frontend
-Bash
+```
 
-# In a new terminal:
+Start the backend from the repository root with the location-independent launcher:
+
+```powershell
+.\backend\scripts\start_backend.ps1
+```
+
+### 4. Start Next.js Frontend
+
+```bash
+# In a new terminal
 cd frontend
 npm install
 npm run dev
+```
+
 Open http://localhost:3000 in your browser.
 
-🧪 Running Automated Tests & Benchmark
-Bash
+## 🧪 Running Automated Tests & Benchmark
 
-# Run unit & integration tests (98+ tests)
+```bash
+# Run unit and integration tests
 cd backend
 python -m pytest -v --tb=short
 
-# Run the 106-scenario automated safety evaluation
+# Run the automated safety evaluation
 python ..\evaluation\benchmark.py
-📂 Repository Structure
-text
+```
 
+## 📂 Repository Structure
+
+```text
 razorbuy/
 ├── backend/
 │   ├── app/
@@ -176,89 +190,7 @@ razorbuy/
 ├── docs/                 # Architecture, Threat Model, Policy Model, API Reference
 ├── docker-compose.yml    # PostgreSQL container configuration
 └── README.md
-📜 License
+```
+
+## 📜 License
 MIT License. Built for the Razorpay AI Builder Internship Buildathon 2026.
-
-text
-
----
-
-## FILE 2 of 6 — `docs/architecture.md`
-
-```markdown
-# RazorBuy Architecture Document
-
-## Overview
-
-RazorBuy is an AI-native merchant infrastructure designed to facilitate secure agentic commerce. The architecture operates under a strict principle: **Autonomous reasoning does not imply autonomous financial authority.**
-
----
-
-## Core Component Diagram
-+-------------------------------------------------------------------------+
-| FRONTEND |
-| Next.js App Router (Dashboard, AI Chat, Orders Ledger, Audit Log) |
-+------------------------------------+------------------------------------+
-| HTTP / REST
-v
-+-------------------------------------------------------------------------+
-| FASTAPI BACKEND |
-| |
-| +-------------------+ +--------------------+ +------------------+ |
-| | Agent Runtime | | Policy Engine | | Payment Service | |
-| | (Ollama Provider) | | (Rule Validator) | | (Razorpay SDK) | |
-| +---------+---------+ +---------+----------+ +--------+---------+ |
-| | | | |
-| +-----------------------+-----------------------+ |
-| | |
-| v |
-| +------------------------+ |
-| | Audit Logging System | |
-| | (Append-Only Ledger) | |
-| +-----------+------------+ |
-+-----------------------------------|-------------------------------------+
-|
-v
-+-------------------------------------------------------------------------+
-| POSTGRESQL DATABASE |
-| products | inventory | orders | payments | policies | audit_events |
-+-------------------------------------------------------------------------+
-
-text
-
-
----
-
-## Component Details
-
-### 1. Agent Runtime (`app/agent/`)
-* **Model-Agnostic Abstraction**: Uses `LLMProvider` interface. Easily switch between local Ollama (`qwen2.5:7b`) and hosted OpenAI/Groq API endpoints via environment variables.
-* **Deterministic Tool Execution**: The agent emits structured JSON tool calls (`search_products`, `get_current_price`, `calculate_offer`, `create_order`).
-* **Step Limit**: Enforces a strict step count limit (default 15) to prevent infinite loops.
-* **Fallback Purchasing**: If a user explicitly requests to buy an item and the LLM fails to format the tool call, the runtime executes a deterministic fallback ordering step.
-
-### 2. Merchant Policy Engine (`app/policy/`)
-* **Zero LLM Dependency**: Pure Python rule evaluation.
-* **Versioned Policy Records**: Stored in PostgreSQL with unique version IDs.
-* **Rule Modules**:
-  1. Transaction limits (autonomous threshold vs human confirmation required)
-  2. Discount limits (dual-check: percent cap AND absolute amount cap)
-  3. Price integrity validation
-  4. Inventory availability verification
-  5. Payment attempt limit checks
-  6. Product/category restriction lists
-
-### 3. Commerce & Inventory Layer (`app/commerce/`)
-* **SQL-First Filtering**: Search queries use ILIKE and JSONB feature filtering in PostgreSQL before candidate products reach the LLM.
-* **Atomic Reservation**: Creating an order reserves stock atomically, preventing double-selling during payment processing.
-* **Reservation Expiry**: Unpaid inventory reservations expire automatically.
-
-### 4. Payment Layer (`app/payments/`)
-* **Razorpay Orders API Integration**: Server-to-server order creation.
-* **Signature Verification**: Verifies Razorpay's `HMAC-SHA256` signature (`razorpay_order_id|razorpay_payment_id`).
-* **Idempotency Keys**: Generates deterministic keys (`order_{id}_payment_attempt_{N}`) to block duplicate charges.
-* **Reconciliation Service**: Resolves `UNKNOWN` payment states through status queries rather than blind retries.
-
-### 5. Audit Logging Ledger (`app/audit/`)
-* **Append-Only Database Design**: PostgreSQL database triggers block `UPDATE` and `DELETE` queries on `audit_events`.
-* **SHA-256 Input Hashes**: Inputs are hashed for tamper evidence.
