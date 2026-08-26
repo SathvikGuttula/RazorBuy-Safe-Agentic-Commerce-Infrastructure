@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: razorbuy-db
+    environment:
+      POSTGRES_USER: razorbuy
+      POSTGRES_PASSWORD: razorbuy_dev_2026
+      POSTGRES_DB: razorbuy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U razorbuy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
